@@ -14,9 +14,12 @@
 # You should have received a copy of the GNU General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 
+# Modified by Derek Weitzel <dweitzel@cse.unl.edu> to add active and activating
+# states as valid statuses.
 
-PLUGINDIR=$(dirname $0)
-. $PLUGINDIR/utils.sh
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_OK=0
 
 
 if [ $# -ne 1 ]; then
@@ -39,12 +42,19 @@ if [ $r -ne 0 ]; then
     exit $STATE_CRITICAL
 fi
 
+# Good states:
+#  Active: active (running) since Tue 2017-05-09 10:46:01 CDT; 2min 29s ago
+#  Active: activating (auto-restart) since Tue 2017-05-09 10:34:40 CDT; 14min ago
+# Bad states:
+#  Anything else...
 
-systemctl --quiet is-active $service
-if [ $? -ne 0 ]; then
-    echo "ERROR: service $service is not running"
+systemctl_out=`systemctl status $service`
+state=`echo $systemctl_out | grep -Po 'Active: \K[^ ]*'`
+
+if [ ! "$state" = "active" ] && [ ! "$state" = "activating" ]; then
+    echo "ERROR: service $service is not running: state = $state"
     exit $STATE_CRITICAL
 fi
 
-echo "OK: service $service is running"
+echo "OK: service $service is running in state: $state"
 exit $STATE_OK
